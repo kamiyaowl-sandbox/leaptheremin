@@ -2,11 +2,24 @@
 
 #define CHANGE_FREQ 0x1
 #define CHANGE_VOL 0x2
+#define CHANGE_POLT 0x3
 
 int speakerPin = 3;
 int csPin = 10;
 
 uint16_t freq = 440;
+uint16_t output_freq = 440;
+//
+uint16_t freq_buf = 0x0;
+uint8_t vol_addr = 0x0;
+uint8_t vol_value = 0xff;
+
+uint8_t poltament_val = 0x1;
+
+uint8_t recv_count = 0x0;
+uint8_t instruction = 0x0;
+
+
 void setup(){
   SPI.begin();
   SPI.setBitOrder(MSBFIRST);
@@ -18,13 +31,29 @@ void setup(){
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin,HIGH);
   
+  /* Wakeup Test */
+  vol_value = 0xff;
   volume_update();
+  tone(speakerPin,freq);
+  for(freq = 31 ; freq < 16383 ; ++freq){
+    tone(speakerPin,freq);
+    delayMicroseconds(100);
+  }
+  freq = 440;
+  tone(speakerPin,freq);
+  delay(200);
+  vol_value = 0x0;
+  volume_update();
+  delay(200);
+  vol_value = 0xff;
+  volume_update();
+  tone(speakerPin,freq);
+  delay(200);
+  vol_value = 0x0;
+  volume_update();
+  delay(200);
+
 }
-uint16_t freq_buf = 0x0;
-uint8_t vol_addr = 0x0;
-uint8_t vol_value = 0xff;
-uint8_t recv_count = 0x0;
-uint8_t instruction = 0x0;
 
 void loop(){
    while(Serial.available()){
@@ -51,16 +80,38 @@ void loop(){
              vol_value = (data & 0x7f) << 1;
              volume_update();
            }
+          case CHANGE_POLT:
+            poltament_val = data & 0x7f;
            break;
        }
        recv_count++;
      }
    }
-  tone(speakerPin,freq);
+  tone_update();
 }
 void volume_update(){
   digitalWrite(csPin,LOW);
   SPI.transfer(vol_addr);
   SPI.transfer(vol_value);
   digitalWrite(csPin,HIGH);
+}
+void tone_update(){
+  if(poltament_val) {
+    if(output_freq > freq) {
+      if(output_freq - freq > poltament_val){
+          output_freq -= poltament_val;
+      } else {
+        output_freq = freq;
+      }
+    } else if(output_freq < freq){
+      if(freq - output_freq > poltament_val){
+        output_freq += poltament_val;
+      } else {
+        output_freq = freq;
+      }
+    }
+  } else {
+    output_freq = freq;
+  }
+  tone(speakerPin,output_freq);
 }

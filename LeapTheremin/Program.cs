@@ -15,12 +15,21 @@ namespace ConsoleApplication1 {
 
 
 			while (true) {
-				Console.Write("Freq>");
-				var freq = int.Parse(Console.ReadLine());
-				Console.Write("Vol>");
-				var vol = int.Parse(Console.ReadLine());
-
-				gen.Update(freq, vol);
+				Console.Write("([f]req,[v]olume,[p]oltament,[q]uit) >");
+				switch (Console.ReadLine()) {
+					case "f":
+						gen.UpdateFreq(int.Parse(Console.ReadLine()));
+						break;
+					case "v":
+						gen.UpdateVol(int.Parse(Console.ReadLine()));
+						break;
+					case "p":
+						gen.UpdatePoltament(int.Parse(Console.ReadLine()));
+						break;
+					case "q":
+						Environment.Exit(0);
+						break;
+				}
 			}
 		}
 
@@ -66,6 +75,9 @@ namespace ConsoleApplication1 {
 		IEnumerable<byte> volUpdate(int vol) {
 			return new byte[] { 0x82, 0x0, (byte)((vol >> 1) & 0x7f) };
 		}
+		IEnumerable<byte> poltUpdate(int pol) {
+			return new byte[] { 0x83, (byte)(pol & 0x7f) };
+		}
 		public void Update(int freq, int vol) {
 			var src = freqUpdate(freq).Concat(volUpdate(vol)).ToArray();
 			serialPort.Write(src, 0, src.Length);
@@ -78,6 +90,11 @@ namespace ConsoleApplication1 {
 			var src = volUpdate(vol).ToArray();
 			serialPort.Write(src, 0, src.Length);
 		}
+		public void UpdatePoltament(int pol) {
+			var src = poltUpdate(pol).ToArray();
+			serialPort.Write(src, 0, src.Length);
+		}
+
 		public void Dispose() {
 			Close();
 		}
