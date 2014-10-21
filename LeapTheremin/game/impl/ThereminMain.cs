@@ -9,13 +9,16 @@ using Leap;
 
 namespace LeapTheremin.game.impl {
 	class ThereminMain : GameLoop {
+		private int screenWidth = 1024;
+		private int screenHeight = 768;
+		private float cameraDistance = 300;
+		private float cameraDistanceDiff = 20;
 		private float cameraX;
 		private float cameraY;
 		private float cameraZ;
 
 		private Controller leap;
 		private Frame frame;
-		private double rad;
 		private int isFill = DX.TRUE;
 
 		public override void Setup() {
@@ -25,7 +28,7 @@ namespace LeapTheremin.game.impl {
 			cameraY = 200;
 			cameraZ = -200;
 
-			DX.SetWindowSize(1024, 768);
+			DX.SetWindowSize(screenWidth, screenHeight);
 			DX.SetFullScreenScalingMode(DX.DX_SCREEN_FRONT);
 			DX.SetCameraNearFar(100.0f, 2000.0f);
 			//DX.SetUseLighting(DX.FALSE);
@@ -38,10 +41,22 @@ namespace LeapTheremin.game.impl {
 			frame = leap.Frame();
 			DX.DrawString(10, 30, frame.Timestamp.ToString(), DX.GetColor(0xff, 0xff, 0xff));
 
-			rad += 0.01;
-			//cameraX = (float)(100 * Math.Cos(rad));
-			//cameraZ = (float)(100 * Math.Sin(rad));
+			moveCamera();
+		}
 
+		private void moveCamera() {
+			int mouseX, mouseY;
+			DX.GetMousePoint(out mouseX, out mouseY);
+
+			var zRad = -(mouseX / (double)screenWidth) * 2 * Math.PI;
+			var yRad = (mouseY / (double)screenWidth) * 2 * Math.PI;
+			cameraX = (float)(cameraDistance * Math.Cos(zRad));
+			cameraZ = (float)(cameraDistance * Math.Sin(zRad));
+
+			cameraY = (float)(cameraDistance * Math.Cos(yRad));
+			var wheel = DX.GetMouseWheelRotVol();
+			if (wheel > 0) cameraDistance -= cameraDistanceDiff;
+			else if (wheel < 0) cameraDistance += cameraDistanceDiff;
 		}
 
 		public override void Update() {
