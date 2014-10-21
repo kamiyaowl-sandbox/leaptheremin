@@ -21,18 +21,45 @@ namespace LeapTheremin.game.impl {
 		private Frame frame;
 		private int isFill = DX.TRUE;
 
-		private int volumeWidth = 200;
+		private int volumeWidth = 160;
 		private int volumeHeight = 20;
-		private Leap.Vector volCenter = new Leap.Vector(-200 / 2 - 30, 30, 0);
+		private Leap.Vector volCenter = new Leap.Vector(-80, 80, 0);
 		private LeapAntenna volumeAntenna;
 
 		private int freqWidth = 200;
 		private int freqHeight = 20;
-		private Leap.Vector freqCenter = new Leap.Vector(100, 100 + 30, 0);
+		private Leap.Vector freqCenter = new Leap.Vector(120, 100 + 30, 0);
 		private LeapAntenna freqAntenna;
 
+		private int volSend = 0;
+		private int freqSend = 0;
+		private ArduinoWaveGen waveGen;
+		private bool isDebugMode;
+
 		public override void Setup() {
+
+			Console.WriteLine("========================================");
+			Console.WriteLine("// LeapTheremin v0.1 for ShimaLab");
+			Console.WriteLine("//                     2014 Fumiya Katoh");
+			Console.WriteLine("========================================");
+			Console.WriteLine("Setup LeapMotion. Please Connect LeapMotion.");
+			Console.Write("Press AnyKey...");
+			Console.ReadLine();
 			leap = new Controller();
+
+			Console.WriteLine("LeapMotion Connected.");
+			Console.WriteLine("Arduino Wave Generator Initialize.");
+			waveGen = new ArduinoWaveGen();
+			Console.Write("PortName (\"s\" is skip) >");
+			var portname = Console.ReadLine();
+			if (portname != "s") {
+				waveGen.PortName = portname;
+				waveGen.Open();
+
+				waveGen.Update(440, 0, 1);
+			}
+			Console.Write("Use DebugMode? (True or False)");
+			isDebugMode = bool.Parse(Console.ReadLine());
 
 			cameraX = -200;
 			cameraY = 200;
@@ -45,11 +72,6 @@ namespace LeapTheremin.game.impl {
 			DX.SetUseZBuffer3D(DX.TRUE);
 			DX.SetWriteZBuffer3D(DX.TRUE);
 			DX.ChangeLightTypeDir(DX.VGet(0.0f, 0.0f, 1.0f));
-		}
-
-		public override void Calculate() {
-			frame = leap.Frame();
-			DX.DrawString(10, 30, frame.Timestamp.ToString(), DX.GetColor(0xff, 0xff, 0xff));
 
 			volumeAntenna = new LeapAntenna() {
 				Pos1 = new Leap.Vector(-volumeWidth / 2.0f + volCenter.x, volCenter.y, -volumeHeight / 2.0f + volCenter.z),
@@ -60,8 +82,46 @@ namespace LeapTheremin.game.impl {
 				Pos1 = new Leap.Vector(freqCenter.x, -freqWidth / 2.0f + freqCenter.y, -freqHeight / 2.0f + freqCenter.z),
 				Pos2 = new Leap.Vector(freqCenter.x, freqWidth / 2.0f + freqCenter.y, freqHeight / 2.0f + freqCenter.z),
 			};
+		}
+
+		public override void Calculate() {
+			frame = leap.Frame();
+
+			if (!frame.Hands.IsEmpty) {
+				var volDistance = frame.Hands.Min(h => h.SphereCenter.DistanceTo(volumeAntenna.Center));
+				var freqDistance = frame.Hands.Min(h => h.SphereCenter.DistanceTo(freqAntenna.Center));
+
+				volSend = mapVolume(volDistance);
+				freqSend = mapFreq(freqDistance);
+
+				if (waveGen.IsOpen) {
+					waveGen.UpdateFreq(freqSend);
+					waveGen.UpdateVol(volSend);
+				}
+
+				if (isDebugMode) {
+					DX.DrawString(10, 50, string.Format("vol = {0}, freq = {1}", volDistance, freqDistance), DX.GetColor(0xff, 0xff, 0xff));
+					DX.DrawString(10, 70, string.Format("vol = {0}, freq = {1}", volSend, freqSend), DX.GetColor(0xff, 0xff, 0xff));
+				}
+			}
 
 			moveCamera();
+		}
+
+		private int mapVolume(float volDistance) {
+			const int volMin = 210;
+			const int volMax = 255;
+			const int thresh = 120;
+			if (volDistance > thresh) return 0;
+			else return (int)((volMax - volMin) * (1.0 - volDistance / (double)thresh)) + volMin;
+		}
+
+		private int mapFreq(float freqDistance) {
+			const int freqMin = 100;//31
+			const int freqMax = 2000;//16383;
+			const int thresh = 150;
+			if (freqDistance > thresh) return freqMax;
+			else return (int)((freqMax - freqMin) * (freqDistance / (double)thresh)) + freqMin;
 		}
 
 		private void moveCamera() {
@@ -82,6 +142,14 @@ namespace LeapTheremin.game.impl {
 		public override void Update() {
 			DX.SetCameraPositionAndTarget_UpVecY(DX.VGet(cameraX, cameraY, cameraZ), DX.VGet(0.0f, 0.0f, 0.0f));
 
+			drawThereminAntenna();
+
+			drawAxis();
+			drawHands();
+
+		}
+
+		private void drawThereminAntenna() {
 			DX.SetMaterialParam(new DX.MATERIALPARAM() {
 				Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
 				Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
@@ -91,6 +159,10 @@ namespace LeapTheremin.game.impl {
 			});
 			DX.DrawCube3D(volumeAntenna.Pos1.ToDX(), volumeAntenna.Pos2.ToDX(), 0, 0, DX.TRUE);
 
+			if (isDebugMode) {
+				DX.DrawSphere3D(volumeAntenna.Center.ToDX(), 10, 10, 0, 0, DX.FALSE);
+			}
+
 			DX.SetMaterialParam(new DX.MATERIALPARAM() {
 				Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
 				Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
@@ -99,9 +171,10 @@ namespace LeapTheremin.game.impl {
 				Power = 10.0f,//反射角度
 			});
 			DX.DrawCube3D(freqAntenna.Pos1.ToDX(), freqAntenna.Pos2.ToDX(), 0, 0, DX.TRUE);
-			
-			drawAxis();
-			drawHands();
+
+			if (isDebugMode) {
+				DX.DrawSphere3D(freqAntenna.Center.ToDX(), 10, 10, 0, 0, DX.FALSE);
+			}
 
 		}
 

@@ -5,12 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ConsoleApplication1.lib {
+namespace LeapTheremin.lib {
 	class ArduinoWaveGen : IDisposable {
 		private SerialPort serialPort;
 
 		public string PortName { get; set; }
-
+		public bool IsOpen { get { return serialPort != null && serialPort.IsOpen; } }
 		public ArduinoWaveGen() { }
 
 		public void Open() {
@@ -42,8 +42,8 @@ namespace ConsoleApplication1.lib {
 		IEnumerable<byte> poltUpdate(int pol) {
 			return new byte[] { 0x83, (byte)(pol & 0x7f) };
 		}
-		public void Update(int freq, int vol) {
-			var src = freqUpdate(freq).Concat(volUpdate(vol)).ToArray();
+		public void Update(int freq, int vol, int pol) {
+			var src = freqUpdate(freq).Concat(volUpdate(vol)).Concat(poltUpdate(pol)).ToArray();
 			serialPort.Write(src, 0, src.Length);
 		}
 		public void UpdateFreq(int freq) {

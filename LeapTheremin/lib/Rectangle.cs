@@ -11,11 +11,7 @@ namespace LeapTheremin.lib {
 
 		public Leap.Vector Center {
 			get {
-				return new Leap.Vector(
-					Pos1.x > Pos2.x ? Pos1.x - Pos2.x : Pos1.x - Pos2.x,
-					Pos1.y > Pos2.y ? Pos1.y - Pos2.y : Pos1.y - Pos2.y,
-					Pos1.z > Pos2.z ? Pos1.z - Pos2.z : Pos1.z - Pos2.z
-					);
+				return (Pos2 + Pos1) / 2;
 			}
 		}
 	}
