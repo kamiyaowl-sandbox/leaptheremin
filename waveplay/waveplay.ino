@@ -5,7 +5,7 @@
 #define CHANGE_POLT 0x3
 
 int speakerPin = 3;
-int csPin = 10;
+int csPin = 10;//AD5263(Digital Potentio Meter)
 
 uint16_t freq = 440;
 uint16_t output_freq = 440;

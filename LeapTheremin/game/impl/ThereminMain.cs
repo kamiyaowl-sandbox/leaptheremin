@@ -109,7 +109,7 @@ namespace LeapTheremin.game.impl {
 		}
 
 		private int mapVolume(float volDistance) {
-			const int volMin = 210;
+			const int volMin = 50;
 			const int volMax = 255;
 			const int thresh = 120;
 			if (volDistance > thresh) return 0;
