@@ -21,6 +21,16 @@ namespace LeapTheremin.game.impl {
 		private Frame frame;
 		private int isFill = DX.TRUE;
 
+		private int volumeWidth = 200;
+		private int volumeHeight = 20;
+		private Leap.Vector volCenter = new Leap.Vector(-200 / 2 - 30, 30, 0);
+		private LeapAntenna volumeAntenna;
+
+		private int freqWidth = 200;
+		private int freqHeight = 20;
+		private Leap.Vector freqCenter = new Leap.Vector(100, 100 + 30, 0);
+		private LeapAntenna freqAntenna;
+
 		public override void Setup() {
 			leap = new Controller();
 
@@ -40,6 +50,16 @@ namespace LeapTheremin.game.impl {
 		public override void Calculate() {
 			frame = leap.Frame();
 			DX.DrawString(10, 30, frame.Timestamp.ToString(), DX.GetColor(0xff, 0xff, 0xff));
+
+			volumeAntenna = new LeapAntenna() {
+				Pos1 = new Leap.Vector(-volumeWidth / 2.0f + volCenter.x, volCenter.y, -volumeHeight / 2.0f + volCenter.z),
+				Pos2 = new Leap.Vector(volumeWidth / 2.0f + volCenter.x, volCenter.y, volumeHeight / 2.0f + volCenter.z),
+			};
+
+			freqAntenna = new LeapAntenna() {
+				Pos1 = new Leap.Vector(freqCenter.x, -freqWidth / 2.0f + freqCenter.y, -freqHeight / 2.0f + freqCenter.z),
+				Pos2 = new Leap.Vector(freqCenter.x, freqWidth / 2.0f + freqCenter.y, freqHeight / 2.0f + freqCenter.z),
+			};
 
 			moveCamera();
 		}
@@ -62,8 +82,25 @@ namespace LeapTheremin.game.impl {
 		public override void Update() {
 			DX.SetCameraPositionAndTarget_UpVecY(DX.VGet(cameraX, cameraY, cameraZ), DX.VGet(0.0f, 0.0f, 0.0f));
 
-			drawAxis();
+			DX.SetMaterialParam(new DX.MATERIALPARAM() {
+				Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
+				Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
+				Specular = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//反射光
+				Emissive = DX.GetColorF(0.5f, 1.0f, 0.0f, 0.0f),//発光色
+				Power = 10.0f,//反射角度
+			});
+			DX.DrawCube3D(volumeAntenna.Pos1.ToDX(), volumeAntenna.Pos2.ToDX(), 0, 0, DX.TRUE);
 
+			DX.SetMaterialParam(new DX.MATERIALPARAM() {
+				Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
+				Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
+				Specular = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//反射光
+				Emissive = DX.GetColorF(1.0f, 0.5f, 0.0f, 0.0f),//発光色
+				Power = 10.0f,//反射角度
+			});
+			DX.DrawCube3D(freqAntenna.Pos1.ToDX(), freqAntenna.Pos2.ToDX(), 0, 0, DX.TRUE);
+			
+			drawAxis();
 			drawHands();
 
 		}
@@ -80,13 +117,13 @@ namespace LeapTheremin.game.impl {
 			foreach (var h in frame.Hands) {
 				var handColor = h.IsLeft ? DX.GetColor(0, 0, 240) : DX.GetColor(240, 0, 0);
 				var material = h.IsLeft ? new DX.MATERIALPARAM() {
-					Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 1.0f),//拡散光
+					Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
 					Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
 					Specular = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//反射光
 					Emissive = DX.GetColorF(0.0f, 0.0f, 1.0f, 0.0f),//発光色
 					Power = 10.0f,//反射角度
 				} : new DX.MATERIALPARAM() {
-					Diffuse = DX.GetColorF(0.0f, 1.0f, 0.0f, 0.0f),//拡散光
+					Diffuse = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//拡散光
 					Ambient = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//環境光
 					Specular = DX.GetColorF(0.0f, 0.0f, 0.0f, 0.0f),//反射光
 					Emissive = DX.GetColorF(1.0f, 0.0f, 0.0f, 0.0f),//発光色
